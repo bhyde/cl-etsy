@@ -12,3 +12,6 @@
 - Doc is always nice.
 
 - The error handling needs love, as it all fails just invoke error.
+
+- Users of status private are problematic, aka secret admirers.
+  {"status":"private","favorite_creation_epoch":1238128010}
