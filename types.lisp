@@ -2,6 +2,15 @@
 
 (in-package "ETSY")
 
+(defmacro dumb-printing (stream object format-string &rest slots)
+  `(let* ((object ,object)
+          ,@(loop for slot in slots
+               collect `(,slot (if (slot-boundp object ',slot)
+                                   (slot-value object ',slot)
+                                   "<unbound>"))))
+    (print-unreadable-object (object stream :type t)
+      (format ,stream ,format-string ,@slots))))
+
 
 ;;; One marshalling function for each parameter type 
 
@@ -94,9 +103,7 @@
            :doc "public or private. If private, user is a Secret Admirer, and no information about the user can be shown.")))
 
 (defmethod print-object ((x user) stream)
-  (with-slots (user-id user-name) x
-    (print-unreadable-object (x stream :type t)
-      (format stream "~D: ~A" user-id user-name))))
+  (dumb-printing stream x "~D: ~A" user-id user-name))
 
 (def-api-class shop (user)
   "Shop records extend user records to include information about the seller's shop. In addition to all the user fields listed above; shops have these additional fields:"
@@ -128,9 +135,7 @@
                   :doc "The number of active listings currently in the section.")))
 
 (defmethod print-object ((x shop-section) stream)
-  (with-slots (section-id title) x
-    (print-unreadable-object (x stream :type t)
-      (format stream "~D: ~A" section-id title))))
+  (dumb-printing stream x "~D: ~A" section-id title))
 
 (defun demarshall-array-of-shop-sections (x)
   (loop for section-json in x
@@ -203,9 +208,7 @@
    ))
 
 (defmethod print-object ((x listing) stream)
-  (with-slots (listing-id title) x
-    (print-unreadable-object (x stream :type t)
-      (format stream "~D: ~A" listing-id title))))
+  (dumb-printing stream x "~D: ~A" listing-id title))
 
 (def-api-class gift-guide ()
   "Gift guides display summary information about each gift guide on the Etsy website.  Gift Guides don't support the detail_level parameter; all fields are available at all times."
@@ -218,9 +221,7 @@
    (guide-section-title :level :low :type string :doc "The title of the guide's parent section.")))
 
 (defmethod print-object ((x gift-guide) stream)
-  (with-slots (guide-id title) x
-    (print-unreadable-object (x stream :type t)
-      (format stream "~D: ~A" guide-id title))))
+  (dumb-printing stream x "~D: ~A" guide-id title))
 
 (def-api-class feedback ()
   "Feedback records represent a comment left by either the buyer or seller in a transaction.  Every sale on Etsy creates two opportunities for a user to leave feedback: one, by the buyer commenting on the seller, and the second by the seller commenting on the buyer."
@@ -254,14 +255,7 @@
                         :doc "The full URL to an image posted by the feedback author (may be blank).")))
 
 (defmethod print-object ((x feedback) stream)
-  (with-slots (feedback-id title disposition) x
-    (print-unreadable-object (x stream :type t)
-      (format stream "~D: ~A ~A"
-              feedback-id
-              (case disposition
-                (:positive "+1")
-                (:negative "-1")
-                (:neutral "00")) title))))
+  (dumb-printing stream x "~D: ~A ~A" feedback disposition title))
 
 (def-api-class api-method ()
   "Method records are returned by the getMethodTable command, which
@@ -283,6 +277,4 @@
   (demarshall-api-method x))
 
 (defmethod print-object ((x api-method) stream)
-  (with-slots (name type) x
-    (print-unreadable-object (x stream :type t)
-      (format stream "~a -> ~a" name type))))
+  (dumb-printing stream x "~a -> ~a" name type))
