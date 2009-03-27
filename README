@@ -2,5 +2,52 @@ CL-Etsy bridges from Common Lisp to version 1 of the Etsy.com API[2].  It is an 
 
 The names used in the API specification use two spelling conventions.  Camel case is sued for method names, e.g. getUserDescription.  In cl-etsy these are converted to the usual lisp spelling, e.g. get-user-description.  Underscores are used for field names, e.g. user_name.  In cl-etsy these are converted to the usual Lisp spelling, e.g. user-name.
 
+All routines in the API two values a list of results and a count.  For example
+here we look for the first 3 users of the name "benjamin".
+
+  ETSY> (get-users-by-name "benjamin" :limit 3  :detail-level :high)
+  (#<USER 7123275: BenjaminHart2008> #<USER 7059119: benjamin6>
+   #<USER 7026092: benjamin315>)
+  128
+  ETSY> 
+
+Note the count is tells you how many results are available in total.  But it is
+occationally the length the list of results.
+
+It is uniform, if a bit counter intuitive, that routines that always return a
+single value also follow this pattern.  For example:
+
+  CL-USER> (etsy:get-server-epoch)
+  (1238167857)
+  1
+  CL-USER> (etsy:ping)
+  ("pong")
+  1
+  CL-USER> (etsy:get-user-details 93)
+  (#<ETSY:USER 93: Rokali>)
+  1
+  CL-USER> 
+
+Error are, at present, signaled by invoking error.  All http requests that
+return other than HTTP code 200 signal an error.  For example:
+
+  CL-USER> (handler-case (print (etsy:get-user-details 1)) (error (c) (format t "~A" c)))
+  Failed API call 404 user_id 1 does not exist
+  NIL
+  CL-USER> (handler-case (print (etsy:get-user-details "bob/slash")) (error (c) (format t "~A" c)))
+  Failed API call 404 Can't route command: /users/bob/slash
+  NIL
+  CL-USER> 
+
+Of course before any of this works you will need to register[2] and then
+create a "application"[4] so you have an an API KEY.  Then store that into
+*API-KEY*, i.e.:
+
+  (setf esty:*api-key* "thisreallyisnotanapikey")
+
+CL-Etsy requires cl-ppcre, drakma, and cl-json.
+
 [1] http://common-lisp.net/project/asdf/
 [2] http://developer.etsy.com/docs
+[3] http://developer.etsy.com/member/register
+[4] http://developer.etsy.com/apps/myapps

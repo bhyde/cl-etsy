@@ -1,0 +1,14 @@
+- Build-method should be teased out into a seperate file.
+
+- The functions manifesting the API should be methods on
+  an object that can manage the connection (throttle, cache,
+  etc.)  That would also allow methods on the classes to
+  fall thru to the raw API calls.
+
+- Need a theory of detail-levels and caching.
+
+- An example would be polite.
+
+- Doc is always nice.
+
+- The error handling needs love, as it all fails just invoke error.
