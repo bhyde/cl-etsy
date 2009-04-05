@@ -7,24 +7,24 @@
 
 (defclass timer ()
   ((start-time :initform 0)
-   (first :initform 0)
-   (last :initform 0)
+   (first-index :initform 0)
+   (last-index :initform 0)
    (max :initform 100)
    (samples :initform (make-array 100))))
 
 (defmethod clear-timer ((timer timer))
-  (with-slots (first last) timer
-    (setf first 0)
-    (setf last 0)))
+  (with-slots (first-index last-index) timer
+    (setf first-index 0)
+    (setf last-index 0)))
 
 (defmethod map-over-timer-samples ((timer timer) lambda)
-  (with-slots (start-time first last max samples) timer
+  (with-slots (start-time first-index last-index max samples) timer
     (cond
-      ((<= first last)
-       (loop for i from first below last do (funcall lambda (svref samples i))))
+      ((<= first-index last-index)
+       (loop for i from first-index below last-index do (funcall lambda (svref samples i))))
       (t
-       (loop for i from first below max do (funcall lambda (svref samples i)))
-       (loop for i from 0 below last do (funcall lambda (svref samples i)))))))
+       (loop for i from first-index below max do (funcall lambda (svref samples i)))
+       (loop for i from 0 below last-index do (funcall lambda (svref samples i)))))))
 
 (defmethod timer-stats  ((timer timer))
   (let ((cnt 0) min max (sum 0.0) (first? t))
@@ -48,16 +48,16 @@
     (setf start-time (get-internal-real-time))))
 
 (defmethod end-timer ((timer timer))
-  (with-slots (start-time first last max samples) timer
+  (with-slots (start-time first-index last-index max samples) timer
     (macrolet ((inc-index (index)
                  `(progn
                     (incf ,index)
                     (when (<= max ,index)
                       (setf ,index 0)))))
-      (inc-index last)
-      (when (= first last)
-        (inc-index first)))
-    (setf (svref samples last) (- (get-internal-real-time) start-time))))
+      (inc-index last-index)
+      (when (= first-index last-index)
+        (inc-index first-index)))
+    (setf (svref samples last-index) (- (get-internal-real-time) start-time))))
 
 
 
