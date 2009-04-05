@@ -2,6 +2,77 @@
 
 (in-package "ETSY")
 
+
+;;;; Interval Timers
+
+(defclass timer ()
+  ((start-time :initform 0)
+   (first :initform 0)
+   (last :initform 0)
+   (max :initform 100)
+   (samples :initform (make-array 100))))
+
+(defmethod clear-timer ((timer timer))
+  (with-slots (first last) timer
+    (setf first 0)
+    (setf last 0)))
+
+(defmethod map-over-timer-samples ((timer timer) lambda)
+  (with-slots (start-time first last max samples) timer
+    (cond
+      ((<= first last)
+       (loop for i from first below last do (funcall lambda (svref samples i))))
+      (t
+       (loop for i from first below max do (funcall lambda (svref samples i)))
+       (loop for i from 0 below last do (funcall lambda (svref samples i)))))))
+
+(defmethod timer-stats  ((timer timer))
+  (let ((cnt 0) min max (sum 0.0) (first? t))
+    (do-timer-samples (x timer)
+      (when first?
+        (setf first? nil)
+        (setf min x)
+        (setf max x))
+      (incf cnt)
+      (incf sum x)
+      (setf min (min min x))
+      (setf max (max max x)))
+    (let ((d (* 1.0 INTERNAL-TIME-UNITS-PER-SECOND)))
+      (values cnt (/ min d) (/ max d) (/ (/ sum d) cnt)))))
+
+(defmacro do-timer-samples ((var timer) &body body)
+  `(map-over-timer-samples ,timer #'(lambda (,var) ,@body)))
+   
+(defmethod begin-timer ((timer timer))
+  (with-slots (start-time) timer
+    (setf start-time (get-internal-real-time))))
+
+(defmethod end-timer ((timer timer))
+  (with-slots (start-time first last max samples) timer
+    (macrolet ((inc-index (index)
+                 `(progn
+                    (incf ,index)
+                    (when (<= max ,index)
+                      (setf ,index 0)))))
+      (inc-index last)
+      (when (= first last)
+        (inc-index first)))
+    (setf (svref samples last) (- (get-internal-real-time) start-time))))
+
+
+
+(defmacro with-interval-timer ((timer-var) &body body)
+  `(let ((#1=#:timer-var ,timer-var))
+     (begin-timer #1#)
+     (unwind-protect
+          (progn ,@body)
+       (end-timer #1#))))
+
+(defvar *etsy-api-request-timer* (make-instance 'timer))
+
+
+;;;; Utilities
+
 (defparameter *base-url* "http://beta-api.etsy.com/v1")
 
 (defvar *api-key* "you need to set your *API-KEY*")
@@ -15,21 +86,6 @@
              (setf (gethash key result) (funcall copy-fn value))))
       (maphash #'copy hash-table)
       result)))
-
-#+obsolete
-(defmacro def-api-type (name args &body body)
-  (declare (ignore args body))
-  `,name)
-
-#+obsolete
-(defmacro def-api-method (name args &body body)
-  (declare (ignore args body))
-  `,name)
-
-#+obsolete
-(defmacro def-api-class (name args &body body)
-  (declare (ignore args body))
-  `,name)
 
 (defun camel-to-lisp (string)
   (intern (nstring-upcase
@@ -99,7 +155,7 @@
            (json:decode-json-from-string
             (flexi-streams:octets-to-string
              (drakma:http-request (concatenate 'string *base-url* "/")
-                                  :parameters `(("api_key" . ,*api-key*)))))))
+                                    :parameters `(("api_key" . ,*api-key*)))))))
       (json:json-bind (results) json
         (let ((*package* (symbol-package 'build-methods)))
           (with-open-file  (*standard-output* "methods.lisp"
@@ -144,7 +200,8 @@
   (json:decode-json-from-string
    (flexi-streams:octets-to-string
     (multiple-value-bind (doc code)
-        (drakma:http-request url :parameters cgi-args)
+        (with-interval-timer (*etsy-api-request-timer*)
+          (drakma:http-request url :parameters cgi-args))
       (unless (eq 200 code)
         (error "Failed API call ~D ~A" code doc))
       doc))))
@@ -168,6 +225,8 @@
     (assert (string= type element-type) () "Type ~S returned was expecting ~S" type element-type)
     (values (mapcar element-demarshall results) count)))
 
+;;;; Meta data about the API
+
 (defclass etsy-object ()
   ((functions-for-demarshall :allocation :class :initform (make-hash-table))))
 
@@ -181,31 +240,67 @@
          (setf (slot-value x slot-name) (funcall func value))))
   x)
 
+(defclass api-slot-description ()
+  ((class :type api-class-description :initarg :class)
+   (plist :initform nil)
+   (name :type symbol :initarg :name)
+   (documentation :type string :initarg :documentation)
+   (detail-level :type keyword :initarg :detail-level)
+   (type :type symbol :initarg :type))
+  (:documentation "Holds declarative information about a slot in a result, as gleaned from the API spec."))
+
+(defclass api-class-description ()
+  ((name :type symbol)
+   (plist :initform nil)
+   (superclass :type symbol)
+   (documentation :type symbol)
+   (slot-descriptions :type list))
+  (:documentation "Holds declarative info about each result type, as gleaned from the API spec."))
+
+(defmacro api-class-info (class-name)
+  `(get ,class-name :api-class-info))
+
+(defmethod slot-description ((x api-class-description) slot-name)
+  (with-slots (slot-descriptions) x
+    (find slot-name slot-descriptions :key #'(lambda (sd) (slot-value sd 'name)))))
+
 (defmacro def-api-class (name (&optional (superclass 'etsy-object)) doc fields)
   (loop
-     with stms = ()
-     with functions-for-demarshall = ()
-     with class-fields
-       finally
-       (return
-         `(progn
-            (defclass ,name (,superclass)
-              ((functions-for-demarshall
-                :initform (let ((x (copy-hash-table (slot-value (make-instance ',superclass)
-                                                                'functions-for-demarshall))))
-                            ,@functions-for-demarshall
-                            x))
-               ,@(nreverse class-fields))
-              (:documentation ,doc))
-            ,@stms
-            (defun ,(build-symbol "DEMARSHALL" name) (x)
-              (fill-out-etsy-object-from-json (make-instance ',name) x))))
-     for field in fields
-     do
-       (destructuring-bind (name &key level type doc json-key) field
-         (declare (ignore level))
-         (unless json-key
-           (setf json-key (lisp-to-json-keyword name)))
-         (push `(,name :documentation ,doc) class-fields)
-         (push `(setf (gethash ',name x) ',(build-symbol "DEMARSHALL" type)) functions-for-demarshall)
-         (push `(estabilish-list-keyword-mapping ',name ,json-key) stms))))
+    with stms = ()
+    with functions-for-demarshall = ()
+    with build-api-slot-descriptions = ()
+    with class-fields
+    finally
+ (return
+   `(progn
+      (let ((api-class-info (make-instance 'api-class-description)))
+        (with-slots (name documentation superclass slot-descriptions) api-class-info
+          (setf name ',name)
+          (setf superclass ',superclass)
+          (setf documentation ,doc)
+          (setf slot-descriptions (list ,@(nreverse build-api-slot-descriptions))))
+        (setf (api-class-info ',name) api-class-info))
+      (defclass ,name (,superclass)
+        ((functions-for-demarshall
+          :initform (let ((x (copy-hash-table (slot-value (make-instance ',superclass)
+                                                          'functions-for-demarshall))))
+                      ,@functions-for-demarshall
+                      x))
+         ,@(nreverse class-fields))
+        (:documentation ,doc))
+      ,@stms
+      (defun ,(build-symbol "DEMARSHALL" name) (x)
+        (fill-out-etsy-object-from-json (make-instance ',name) x))))
+
+    for field in fields
+    do
+ (destructuring-bind (name &key level type doc json-key) field
+   (unless json-key (setf json-key (lisp-to-json-keyword name)))
+   (push `(make-instance 'api-slot-description
+                         :class api-class-info
+                         :name ',name
+                         :type ',type
+                         :detail-level ',level) build-api-slot-descriptions)
+   (push `(,name :documentation ,doc) class-fields)
+   (push `(setf (gethash ',name x) ',(build-symbol "DEMARSHALL" type)) functions-for-demarshall)
+   (push `(estabilish-list-keyword-mapping ',name ,json-key) stms))))
