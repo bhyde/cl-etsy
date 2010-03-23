@@ -44,12 +44,21 @@
   (parse-integer (subseq x 1) :radix 16))
 (defun demarshall-enum-to-keyword (x)
   (intern (string-upcase x) (symbol-package :keyword)))
+(defun demarshall-image-booklet (booklet)
+  (loop 
+     for image-set in booklet
+     collect image-set))
+
 
 
 (define-unusual-json-mapping 'image-url-25x25 :image--url--25-x-25)
 (define-unusual-json-mapping 'image-url-30x30 :IMAGE--URL--30-X-30)
 (define-unusual-json-mapping 'image-url-50x50 :IMAGE--URL--50-X-50)
 (define-unusual-json-mapping 'image-url-75x75 :IMAGE--URL--75-X-75)
+(define-unusual-json-mapping 'image-url-155x125 :IMAGE--URL--155-X-125)
+(define-unusual-json-mapping 'image-url-200x200 :IMAGE--URL--200-X-200)
+(define-unusual-json-mapping 'image-url-430xN :image--url--430-x-n )
+
 
 (def-api-class user ()
   "User records represent a single user of the site, who may or may not be a seller."
@@ -182,6 +191,8 @@
                   :doc "The ISO (alphabetic) code for the item's currency.")
    (ending-epoch :level medium :type float
                  :doc "The listing's expiration date and time, in epoch seconds.")
+   (sold-out-epoch :level medium :type float
+                   :doc "When the item sold out.")
    (user-id :level medium :type int
             :doc "The numeric ID of the user who posted the item. (User IDs are also shop IDs).")
    (user-name :level medium :type string
@@ -209,6 +220,10 @@
    ;; and also
    (user-image-id :level high :type int
                   :doc "No idea what this is")
+   (num-favorers :level high :type int
+                 :doc "Presumably, the number of hearts.")
+   (all-images :level high :type image-booklet
+               :doc "A list of set objects")
    ))
 
 (defmethod print-object ((x listing) stream)
