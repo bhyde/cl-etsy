@@ -26,6 +26,9 @@
        (loop for i from first-index below max do (funcall lambda (svref samples i)))
        (loop for i from 0 below last-index do (funcall lambda (svref samples i)))))))
 
+(defmacro do-timer-samples ((var timer) &body body)
+  `(map-over-timer-samples ,timer #'(lambda (,var) ,@body)))
+
 (defmethod timer-stats  ((timer timer))
   (let ((cnt 0) min max (sum 0.0) (first? t))
     (do-timer-samples (x timer)
@@ -39,9 +42,6 @@
       (setf max (max max x)))
     (let ((d (* 1.0 INTERNAL-TIME-UNITS-PER-SECOND)))
       (values cnt (/ min d) (/ max d) (/ (/ sum d) cnt)))))
-
-(defmacro do-timer-samples ((var timer) &body body)
-  `(map-over-timer-samples ,timer #'(lambda (,var) ,@body)))
    
 (defmethod begin-timer ((timer timer))
   (with-slots (start-time) timer
@@ -245,7 +245,7 @@
    (plist :initform nil)
    (name :type symbol :initarg :name)
    (documentation :type string :initarg :documentation)
-   (detail-level :type keyword :initarg :detail-level)
+   (detail-level :type symbol :initarg :detail-level)
    (type :type symbol :initarg :type))
   (:documentation "Holds declarative information about a slot in a result, as gleaned from the API spec."))
 
@@ -253,7 +253,7 @@
   ((name :type symbol)
    (plist :initform nil)
    (superclass :type symbol)
-   (documentation :type symbol)
+   (documentation :type string)
    (slot-descriptions :type list))
   (:documentation "Holds declarative info about each result type, as gleaned from the API spec."))
 
