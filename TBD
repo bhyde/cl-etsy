@@ -1,0 +1,6 @@
+A list of random things that probably need work.
+
+- I'm not happy with what I'm interning for the "all_images" of a listing,
+in particular it looks like that should be a new kind of object that
+is then mixed into the listing object for it's default image slots.
+
