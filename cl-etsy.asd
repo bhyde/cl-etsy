@@ -8,7 +8,10 @@
   :serial t
   :components ((:file "packages")
                (:file "base")
+               (:file "api-utils")
                (:file "types")
                (:file "methods")
-               (:file "main")))
+               (:file "main")
+               #+5am (:file "tests")
+               ))
 

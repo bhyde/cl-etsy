@@ -46,7 +46,11 @@ create a "application"[4] so you have an an API KEY.  Then store that into
 
 CL-Etsy requires cl-ppcre, drakma, and cl-json.
 
+If you have the testing utlity FiveAM[5] loaded when you load the system then you get a modicum of
+testing as defined in the tests.lisp file; you can run these by doing: (fiveam:run! etsy::etsy-api).
+
 [1] http://common-lisp.net/project/asdf/
 [2] http://developer.etsy.com/docs
 [3] http://developer.etsy.com/member/register
 [4] http://developer.etsy.com/apps/myapps
+[5] http://common-lisp.net/project/bese/FiveAM.html

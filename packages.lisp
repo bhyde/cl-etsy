@@ -4,7 +4,7 @@
 
 (defpackage "ETSY"
   (:documentation "A bridge from common lisp to API of etsy.com.")
-  (:use "COMMON-LISP")
+  (:use "COMMON-LISP" #+5am "FIVEAM")
   (:export 
    ;; Globals
    "*API-KEY*"
