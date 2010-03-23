@@ -46,6 +46,10 @@
   (intern (string-upcase x) (symbol-package :keyword)))
 
 
+(define-unusual-json-mapping 'image-url-25x25 :image--url--25-x-25)
+(define-unusual-json-mapping 'image-url-30x30 :IMAGE--URL--30-X-30)
+(define-unusual-json-mapping 'image-url-50x50 :IMAGE--URL--50-X-50)
+(define-unusual-json-mapping 'image-url-75x75 :IMAGE--URL--75-X-75)
 
 (def-api-class user ()
   "User records represent a single user of the site, who may or may not be a seller."

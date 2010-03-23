@@ -100,12 +100,19 @@
 (defun lisp-to-json-keyword (symbol)
   (or (gethash symbol *lisp-keyword-dictionary*)
       (setf (gethash symbol *lisp-keyword-dictionary*)
-            (intern (substitute #\_ #\- (symbol-name symbol)) (symbol-package :keyword)))))
+            (intern
+             (cl-ppcre:regex-replace-all "-" (symbol-name symbol) "--")
+             (symbol-package :keyword)))))
 
 (defun keyword-to-lisp-symbol (keyword)
   (or (gethash keyword *lisp-keyword-dictionary*)
       (setf (gethash keyword *lisp-keyword-dictionary*)
-            (intern (substitute #\- #\- (symbol-name keyword))))))
+            (intern
+             (cl-ppcre:regex-replace-all "--" (symbol-name keyword) "-")))))
+
+(defun define-unusual-json-mapping (lisp json-keyword)
+  (setf (gethash lisp *lisp-keyword-dictionary*) json-keyword)
+  (setf (gethash json-keyword *lisp-keyword-dictionary*) lisp ))
 
 (defun underscore-to-dash (string)
   (intern (nstring-upcase
@@ -114,10 +121,18 @@
 (defun lisp-to-cgi (symbol)
   (nstring-downcase (substitute #\_ #\- (symbol-name symbol))))
 
+(defmacro with-json-symbol-mapping (() &body body)
+  `(let ((*json-identifier-name-to-lisp* )
+         (*lisp-identifier-name-to-json* ))
+     ,@body))
+
+
+
 (defmacro with-json-bindings ((&rest vars) json &body body)
   `(let* ((#1=json ,json)
           ,@(loop for var in vars
                collect `(,var (cdr (assoc ,(lisp-to-json-keyword var) #1#)))))
      ,@body))
+
 
 
