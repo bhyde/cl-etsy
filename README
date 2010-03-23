@@ -1,6 +1,6 @@
 CL-Etsy bridges from Common Lisp to version 1 of the Etsy.com API[2].  It is an asdf[1].  Once loaded the common lisp package "ETSY" exports one routine for each method in the API, and classes for user, shop, listing, and api-method.
 
-The names used in the API specification use two spelling conventions.  Camel case is sued for method names, e.g. getUserDescription.  In cl-etsy these are converted to the usual lisp spelling, e.g. get-user-description.  Underscores are used for field names, e.g. user_name.  In cl-etsy these are converted to the usual Lisp spelling, e.g. user-name.
+The names used in the API specification use two spelling conventions.  Camel case is used for method names, e.g. getUserDescription.  In cl-etsy these are converted to the usual lisp spelling, e.g. get-user-description.  Underscores are used for field names, e.g. user_name.  In cl-etsy these are converted to the usual Lisp spelling, e.g. user-name.
 
 All routines in the API two values a list of results and a count.  For example
 here we look for the first 3 users of the name "benjamin".
