@@ -2,8 +2,14 @@
 
 (in-package "ETSY")
 
-;;; It is very unlikely that this can run to completion given the daily limit
-;;; on API calls and the presumably nearly infinate size of the universe of tags
+;;; It is very unlikely that this can run to completion in a
+;;; reasonable abount of time.  Given the daily limit on API calls and
+;;; the presumably nearly infinite size of the universe of tags.  So any
+;;; effort to download the full graph would require some persistant store
+;;; coupled with a long and steady effort over many days.  Don't.
+
+;;; Note that there are cycles in the tag-child->tag graph.  For example:
+;;; men->vest->men.
 
 (defun get-all-tags ()
   (loop
@@ -17,3 +23,4 @@
                      do (push i q))
                 (format t "~& ~D ~D" (length q) (length result))))
          (f (pop q)))))
+
