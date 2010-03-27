@@ -106,6 +106,8 @@
                 :doc "The month portion of the user's birthday (may be blank).")
    (bio :level :high :type string
         :doc "The user's biography (may be blank).")
+   (num-favorers :level high :type int
+                 :doc "Presumably, the number of hearts.")
    (feedback-count :level :high :type int
                    :doc "The total count of feedback by and about this user.")
    (feedback-percent-positive :level :favorites :type int
